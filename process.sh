@@ -80,7 +80,7 @@ do {
                                 fi
 
                                 ## SEND SMS sur GSM1
-                                OUTPUT="$(echo send.php $mobile "$text")"
+                                OUTPUT="$(php send.php $mobile "$text")"
                                 echo $time $pdl $mobile $OUTPUT >> log.$date
                                 sleep $sleep
                         else
@@ -106,7 +106,7 @@ do {
                                         echo
                                 fi
                                 ## SEND SMS sur GSM2
-                                OUTPUT="$(echo send.php $mobile2 "$text")"
+                                OUTPUT="$(php send.php $mobile2 "$text")"
                                 echo $time $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                         else
@@ -133,7 +133,7 @@ do {
                                                 echo
                                         fi
                                         ## SEND SMS sur GSM1
-                                        OUTPUT="$(echo send.php $mobile "$text")"
+                                        OUTPUT="$(php send.php $mobile "$text")"
                                         echo $time $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
@@ -160,7 +160,7 @@ do {
                                 ## SEND SMS sur GSM1 et sur GSM2
                                 ## CHECK si numero fourni est bien un GSM pour GSM1
                                 if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
-                                        OUTPUT="$(echo send.php $mobile "$text")"
+                                        OUTPUT="$(php send.php $mobile "$text")"
                                         echo $time $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
@@ -175,7 +175,7 @@ do {
                                 fi
                                 ## CHECK si numero fourni est bien un GSM pour GSM2
                                 if [ ${mobile2:0:2} == '06' ] || [ ${mobile2:0:2} == '07' ]; then
-                                        OUTPUT="$(echo send.php $mobile2 "$text")"
+                                        OUTPUT="$(php send.php $mobile2 "$text")"
                                         echo $time $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                                 else
