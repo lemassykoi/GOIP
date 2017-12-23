@@ -6,16 +6,21 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 ## Variables
-DEBUG=1 # PUT HERE 0 OR 1 OR 2
-EDP_phone="XXXXXXXXXX"
-bot_token="bot-TOKEN"
-bot_chat_id="XXXXXXXXX"
+DEBUG=1
+EDP_phone="xxxxxxxxxx"
+bot_token="bot-token"
+bot_chat_id="xxxxxxxxx"
 sleep=50
 date=$(date +%d.%m.%Y)
 time=$(date +%H.%M.%S)
 path="/root/GOIP-PHP"
 exportpath="/home/user/SHARE"
 file=$(ls $exportpath/Export_du_$date*)
+localIP=$(hostname -I | cut -d " " -f 1)
+keepalive_port=44444
+keepalive_file="/tmp/keepalive"
+sms_server_IP="10.0.0.1"
+logfile="/tmp/process_log.$date.$time.txt"
 
 ## Functions
 timestamp() {
@@ -26,6 +31,10 @@ starttime=$(timestamp)
 
 ## CLEAR SCREEN
 clear
+echo
+echo "$(timestamp).Starting Script..." > $logfile
+echo "$(timestamp).Starting Script..."
+echo
 
 if [ $DEBUG != 0 ]; then
         echo -e "${GREEN}"
@@ -44,6 +53,12 @@ if [ -z "$file" ]; then
         exit 1
 fi
 
+## Test fichier SEND.PHP
+if [ -f send.php ]; then
+	echo "send.php found" >> $logfile
+else echo -e "${RED}send.php not found !${NC}"; exit 2
+fi
+
 echo
 echo "Fichier de travail : "$file
 echo
@@ -54,6 +69,32 @@ rm -rf log.$date
 
 ## Conversion
 /usr/bin/iconv -f ISO-8859-1 -t UTF-8 $file -o export.csv
+
+## KEEPALIVE
+echo
+echo "$(timestamp).Starting keepalive.php... please wait 30 seconds"
+echo "$(timestamp).Starting keepalive.php... please wait 30 seconds" >> $logfile
+echo
+php keepalive.php $localIP $keepalive_port > $keepalive_file &
+sleep 30
+echo
+echo "$(timestamp).keepalive done !"
+echo "$(timestamp).Keepalive done !" >> $logfile
+echo
+
+## catch SMS Server port
+sms_new_port=$(cat $keepalive_file | grep port | cut -d ";" -f 20 | cut -d " " -f 9)
+
+## edit settings.php for port
+rm -rf settings.php
+cp settings.php.goip settings.php
+sed -i -- 's/YYYY/"${sms_server_IP}"/g' settings.php
+sed -i -- 's/XXXX/"${sms_new_port}"/g' settings.php
+
+echo
+echo "$(timestamp).Starting Process..." >> $logfile
+echo "$(timestamp).Starting Process..."
+echo
 
 ## affiche et traite chaque ligne du fichier export.csv
 cat export.csv | while read -r a;
@@ -66,8 +107,8 @@ do {
 
         ## SKIP FIRST LINE
         if [ "$pdl" != "Identifiant du PDL" ]; then
-
-                ################################# Test si numero GSM1 OK et GSM2 KO
+          if [ "$heure" != "null à null" ]; then
+				        ################################# Test si numero GSM1 OK et GSM2 KO
                 if [ -n "$mobile" ] && [ -z "$mobile2" ]; then
                         ## CHECK si numero fourni est bien un GSM
                         if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
@@ -205,7 +246,7 @@ do {
                         echo "ERREUR"
                         echo $time $pdl "==ERREUR=="  >> log.$date
                 fi
-
+			fi 
         ##fi du test si PDL = premiere ligne
         fi
 
@@ -214,7 +255,7 @@ done
 
 endtime=$(timestamp)
 
-## Deplace le fichier LOG dans le partage accessible par les planifs
+## Deplace le fichier LOG dans le partage accessible par les gens
 mv log.$date $exportpath/log.$date.$time.txt
 
 ## Count line number in log file
@@ -244,5 +285,23 @@ if [ $DEBUG != 0 ]; then
         echo "END TIME     : "$endtime
         echo -e "${NC}"
 fi
+
+## kill keepalive
+echo
+echo "$(timestamp).Killing KEEPALIVE..." >> $logfile
+echo "$(timestamp).Killing KEEPALIVE..."
+echo
+keepalive_pid=$(ps -fu $USER | grep keepalive | grep -v grep | awk '{print $2}')
+kill $keepalive_pid
+if [ "$?" != "0" ]; then
+	echo -e "${RED}"
+	echo "ERREUR lors du Kill du KEEPALIVE !" >>$logfile
+	echo "ERREUR lors du Kill du KEEPALIVE !"
+	echo -e "${NC}"
+fi
+mv $keepalive_file $exportpath/keepalive.$date.$time.txt > /dev/null 2>&1
+
+## END
+rm -rf sendMessage\?chat_id\=*
 
 exit 0
