@@ -1,0 +1,7 @@
+<?php
+
+return array(
+    'goipAddress' => 'YYYY', //The IP address of the GOIP
+    'goipPort' => 'XXXX', //The port that GOIP listens to (maybe 9991, find out using keepalive.php
+    'goipPassword' => 'goipgoip' //The password set in GOIP management
+);
