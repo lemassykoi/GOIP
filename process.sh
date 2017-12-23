@@ -88,8 +88,8 @@ sms_new_port=$(cat $keepalive_file | grep port | cut -d ";" -f 20 | cut -d " " -
 ## edit settings.php for port
 rm -rf settings.php
 cp settings.php.goip settings.php
-sed -i -- 's/YYYY/"${sms_server_IP}"/g' settings.php
-sed -i -- 's/XXXX/"${sms_new_port}"/g' settings.php
+sed -i "s|YYYY|${sms_server_IP}|" settings.php
+sed -i "s|XXXX|${sms_new_port}|" settings.php
 
 echo
 echo "$(timestamp).Starting Process..." >> $logfile
