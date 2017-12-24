@@ -19,7 +19,7 @@ file=$(ls $exportpath/Export_du_$date*)
 localIP=$(hostname -I | cut -d " " -f 1)
 keepalive_port=44444
 keepalive_file="/tmp/keepalive"
-sms_server_IP="10.0.0.1"
+sms_server_IP="192.168.0.10"
 logfile="/tmp/process_log.$date.$time.txt"
 
 ## Functions
@@ -48,19 +48,33 @@ fi
 if [ -z "$file" ]; then
         echo -e "${RED}PROBLEME AVEC FICHIER EXPORT${NC}"
         echo
+	echo "PROBLEME AVEC FICHIER EXPORT !!" >> $logfile
         message="SMS : PROBLEME AVEC FICHIER EXPORT"
         wget "https://api.telegram.org/$bot_token/sendMessage?chat_id=$bot_chat_id&text=$message" > /dev/null 2>&1
-        exit 1
+        mv $logfile $exportpath/ ; exit 1
 fi
 
-## Test fichier SEND.PHP
+## Test fichier send.php
 if [ -f send.php ]; then
-	echo "send.php found" >> $logfile
-else echo -e "${RED}send.php not found !${NC}"; exit 2
+	echo "$(timestamp).File send.php found ! Ok..." >> $logfile
+else
+	echo -e "${RED}$(timestamp).File send.php NOT found ! ERROR !${NC}"
+	echo "$(timestamp).File send.php NOT found ! ERROR !" >> $logfile
+	mv $logfile $exportpath/ ; exit 2
+fi
+
+## Test fichier settings.php.goip
+if [ -f settings.php.goip ]; then
+	echo "$(timestamp).File settings.php.goip found ! Ok..." >> $logfile
+else
+	echo -e "${RED}$(timestamp).File settings.php.goip NOT found ! ERROR !${NC}"
+	echo "$(timestamp).File settings.php.goip NOT found ! ERROR !" >> $logfile
+	mv $logfile $exportpath/ ; exit 3
 fi
 
 echo
 echo "Fichier de travail : "$file
+echo "$(timestamp).Fichier de travail : "$file >> $logfile
 echo
 
 ## CLEAN
@@ -73,7 +87,7 @@ rm -rf log.$date
 ## KEEPALIVE
 echo
 echo "$(timestamp).Starting keepalive.php... please wait 30 seconds"
-echo "$(timestamp).Starting keepalive.php... please wait 30 seconds" >> $logfile
+echo "$(timestamp).Starting keepalive.php... sleep 30 seconds" >> $logfile
 echo
 php keepalive.php $localIP $keepalive_port > $keepalive_file &
 sleep 30
@@ -84,12 +98,38 @@ echo
 
 ## catch SMS Server port
 sms_new_port=$(cat $keepalive_file | grep port | cut -d ";" -f 20 | cut -d " " -f 9)
+echo "$(timestamp).SMS Server Port : $sms_new_port" >> $logfile
 
 ## edit settings.php for port
 rm -rf settings.php
 cp settings.php.goip settings.php
 sed -i "s|YYYY|${sms_server_IP}|" settings.php
+if [ "$?" == "0" ]; then
+	echo -e "${GREEN}"
+	echo "SMS Server IP replacement OK !"
+	echo -e "${NC}"
+	echo "$(timestamp).SMS Server IP replacement OK !" >> $logfile
+else
+	echo -e "${RED}"
+	echo "ERROR ! CAN'T REPLACE YYYY in settings.php"
+	echo -e "${NC}"
+	echo "$(timestamp).ERROR ! CAN'T REPLACE YYYY in settings.php" >> $logfile
+	mv $logfile $exportpath/ ; exit 4
+fi
+
 sed -i "s|XXXX|${sms_new_port}|" settings.php
+if [ "$?" == "0" ]; then
+	echo -e "${GREEN}"
+	echo "SMS Server Port replacement OK !"
+	echo -e "${NC}"
+	echo "$(timestamp).SMS Server Port replacement OK !" >> $logfile
+else
+	echo -e "${RED}"
+	echo "ERROR ! CAN'T REPLACE XXXX in settings.php"
+	echo -e "${NC}"
+	echo "$(timestamp).ERROR ! CAN'T REPLACE XXXX in settings.php" >> $logfile
+	mv $logfile $exportpath/ ; exit 5
+fi
 
 echo
 echo "$(timestamp).Starting Process..." >> $logfile
@@ -107,11 +147,11 @@ do {
 
         ## SKIP FIRST LINE
         if [ "$pdl" != "Identifiant du PDL" ]; then
-          if [ "$heure" != "null à null" ]; then
-				        ################################# Test si numero GSM1 OK et GSM2 KO
-                if [ -n "$mobile" ] && [ -z "$mobile2" ]; then
-                        ## CHECK si numero fourni est bien un GSM
-                        if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
+		if [ "$heure" != "null à null" ]; then
+			################################# Test si numero GSM1 OK et GSM2 KO
+                	if [ -n "$mobile" ] && [ -z "$mobile2" ]; then
+                        	## CHECK si numero fourni est bien un GSM
+                        	if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
                                 if [ $DEBUG != 0 ]; then
                                         echo "PDL : "$pdl" -- Créneau horaire : "$heure" -- GSM1 : "$mobile" --- CAS 1"
                                 fi
@@ -122,7 +162,7 @@ do {
 
                                 ## SEND SMS sur GSM1
                                 OUTPUT="$(php send.php $mobile "$text")"
-                                echo $time $pdl $mobile $OUTPUT >> log.$date
+                                echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                 sleep $sleep
                         else
                                 if [ $DEBUG != 0 ]; then
@@ -132,7 +172,7 @@ do {
                                         echo " -- NUMERO NON GSM -- "
                                         echo
                                 fi
-                                echo $time $pdl "NON GSM" >> log.$date
+                                echo $(timestamp) $pdl "NON GSM" >> log.$date
                         fi
 
                 ################################# Test si numero GSM1 KO et GSM2 OK
@@ -148,7 +188,7 @@ do {
                                 fi
                                 ## SEND SMS sur GSM2
                                 OUTPUT="$(php send.php $mobile2 "$text")"
-                                echo $time $pdl $mobile2 $OUTPUT >> log.$date
+                                echo $(timestamp) $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                         else
                                 if [ $DEBUG != 0 ]; then
@@ -158,7 +198,7 @@ do {
                                         echo " -- NUMERO NON GSM -- "
                                         echo
                                 fi
-                                echo $time $pdl "NON GSM" >> log.$date
+                                echo $(timestamp) $pdl "NON GSM" >> log.$date
                         fi
 
                 ################################# Test si numero GSM1 OK et GSM2 OK
@@ -175,7 +215,7 @@ do {
                                         fi
                                         ## SEND SMS sur GSM1
                                         OUTPUT="$(php send.php $mobile "$text")"
-                                        echo $time $pdl $mobile $OUTPUT >> log.$date
+                                        echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
                                         if [ $DEBUG != 0 ]; then
@@ -185,7 +225,7 @@ do {
                                                 echo " -- NUMERO NON GSM -- "
                                                 echo
                                         fi
-                                        echo $time $pdl "NON GSM" >> log.$date
+                                        echo $(timestamp) $pdl "NON GSM" >> log.$date
                                 fi
 
                         ########### TEST si GSM1 et GSM2 sont differents
@@ -202,7 +242,7 @@ do {
                                 ## CHECK si numero fourni est bien un GSM pour GSM1
                                 if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
                                         OUTPUT="$(php send.php $mobile "$text")"
-                                        echo $time $pdl $mobile $OUTPUT >> log.$date
+                                        echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
                                         if [ $DEBUG != 0 ]; then
@@ -212,12 +252,12 @@ do {
                                                 echo " -- NUMERO 1 NON GSM -- "
                                                 echo
                                         fi
-                                        echo $time $pdl "NON GSM" >> log.$date
+                                        echo $(timestamp) $pdl "NON GSM" >> log.$date
                                 fi
                                 ## CHECK si numero fourni est bien un GSM pour GSM2
                                 if [ ${mobile2:0:2} == '06' ] || [ ${mobile2:0:2} == '07' ]; then
                                         OUTPUT="$(php send.php $mobile2 "$text")"
-                                        echo $time $pdl $mobile2 $OUTPUT >> log.$date
+                                        echo $(timestamp) $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                                 else
                                         if [ $DEBUG != 0 ]; then
@@ -227,7 +267,7 @@ do {
                                                 echo " -- NUMERO 2 NON GSM -- "
                                                 echo
                                         fi
-                                        echo $time $pdl "NON GSM" >> log.$date
+                                        echo $(timestamp) $pdl "NON GSM" >> log.$date
                                 fi
                         fi
 
@@ -236,15 +276,14 @@ do {
                 elif [ -z "$mobile" ] && [ -z "$mobile2" ]; then
                         if [ $DEBUG != 0 ]; then
                                 echo "PDL : "$pdl" -- Créneau horaire : "$heure" -- PAS DE GSM --- CAS 4"
-                                echo
                         fi
-                echo "PDL sans GSM :"$pdl
-                echo $time $pdl "==PDL SANS GSM=="  >> log.$date
+                echo -e "${RED}PDL sans GSM : "$pdl"${NC}"
+                echo $(timestamp) $pdl "==PDL SANS GSM=="  >> log.$date
 
                 ## Tout autre cas
                 else
                         echo "ERREUR"
-                        echo $time $pdl "==ERREUR=="  >> log.$date
+                        echo $(timestamp) $pdl "==ERREUR=="  >> log.$date
                 fi
 			fi 
         ##fi du test si PDL = premiere ligne
@@ -254,6 +293,11 @@ do {
 done
 
 endtime=$(timestamp)
+
+echo "$(timestamp).Process Done !" >> $logfile
+echo
+echo -e "${GREEN}$(timestamp).Process Done !${NC}"
+
 
 ## Deplace le fichier LOG dans le partage accessible par les gens
 mv log.$date $exportpath/log.$date.$time.txt
@@ -293,15 +337,24 @@ echo "$(timestamp).Killing KEEPALIVE..."
 echo
 keepalive_pid=$(ps -fu $USER | grep keepalive | grep -v grep | awk '{print $2}')
 kill $keepalive_pid
-if [ "$?" != "0" ]; then
+if [ "$?" == "0" ]; then
+	if [ $DEBUG != 0 ]; then echo "Error status : "$?; echo; fi
+	echo -e "${GREEN}"
+	echo "Kill KEEPALIVE Ok !"
+	echo -e "${NC}"
+	echo "$(timestamp).Kill KEEPALIVE Ok !" >> $logfile
+else
+	if [ $DEBUG != 0 ]; then echo "Error status : "$?; echo; fi
 	echo -e "${RED}"
-	echo "ERREUR lors du Kill du KEEPALIVE !" >>$logfile
 	echo "ERREUR lors du Kill du KEEPALIVE !"
 	echo -e "${NC}"
+	echo "$(timestamp).ERREUR lors du Kill du KEEPALIVE !" >> $logfile
 fi
+
 mv $keepalive_file $exportpath/keepalive.$date.$time.txt > /dev/null 2>&1
 
 ## END
+mv $logfile $exportpath/
 rm -rf sendMessage\?chat_id\=*
 
 exit 0
