@@ -97,7 +97,7 @@ echo "$(timestamp).Keepalive done !" >> $logfile
 echo
 
 ## catch SMS Server port
-sms_new_port=$(cat $keepalive_file | grep port | cut -d ";" -f 20 | cut -d " " -f 9)
+sms_new_port=$(cat $keepalive_file | grep port | cut -d ";" -f 20 | cut -d " " -f 9 | head -1)
 echo "$(timestamp).SMS Server Port : $sms_new_port" >> $logfile
 
 ## edit settings.php for port
