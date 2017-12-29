@@ -21,6 +21,8 @@ keepalive_port=44444
 keepalive_file="/tmp/keepalive"
 sms_server_IP="192.168.0.10"
 logfile="/tmp/process_log.$date.$time.txt"
+#exec="php"
+exec="echo"
 
 ## Functions
 timestamp() {
@@ -35,6 +37,17 @@ echo
 echo "$(timestamp).Starting Script..." > $logfile
 echo "$(timestamp).Starting Script..."
 echo
+
+## Check what's going on : ECHO or PHP ?
+if [ "$exec" == "php" ]; then
+echo -e "${GREEN}"
+echo "Commande CMD : "$exec
+echo -e "${NC}"
+elif [ "$exec" == "echo" ]; then
+echo -e "${RED}"
+echo "Commande CMD : "$exec
+echo -e "${NC}"
+fi
 
 if [ $DEBUG != 0 ]; then
         echo -e "${GREEN}"
@@ -161,7 +174,7 @@ do {
                                 fi
 
                                 ## SEND SMS sur GSM1
-                                OUTPUT="$(php send.php $mobile "$text")"
+                                OUTPUT="$($exec send.php $mobile "$text")"
                                 echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                 sleep $sleep
                         else
@@ -187,7 +200,7 @@ do {
                                         echo
                                 fi
                                 ## SEND SMS sur GSM2
-                                OUTPUT="$(php send.php $mobile2 "$text")"
+                                OUTPUT="$($exec send.php $mobile2 "$text")"
                                 echo $(timestamp) $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                         else
@@ -214,7 +227,7 @@ do {
                                                 echo
                                         fi
                                         ## SEND SMS sur GSM1
-                                        OUTPUT="$(php send.php $mobile "$text")"
+                                        OUTPUT="$($exec send.php $mobile "$text")"
                                         echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
@@ -241,7 +254,7 @@ do {
                                 ## SEND SMS sur GSM1 et sur GSM2
                                 ## CHECK si numero fourni est bien un GSM pour GSM1
                                 if [ ${mobile:0:2} == '06' ] || [ ${mobile:0:2} == '07' ]; then
-                                        OUTPUT="$(php send.php $mobile "$text")"
+                                        OUTPUT="$($exec send.php $mobile "$text")"
                                         echo $(timestamp) $pdl $mobile $OUTPUT >> log.$date
                                         sleep $sleep
                                 else
@@ -256,7 +269,7 @@ do {
                                 fi
                                 ## CHECK si numero fourni est bien un GSM pour GSM2
                                 if [ ${mobile2:0:2} == '06' ] || [ ${mobile2:0:2} == '07' ]; then
-                                        OUTPUT="$(php send.php $mobile2 "$text")"
+                                        OUTPUT="$($exec send.php $mobile2 "$text")"
                                         echo $(timestamp) $pdl $mobile2 $OUTPUT >> log.$date
                                 sleep $sleep
                                 else
